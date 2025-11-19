@@ -4,20 +4,38 @@ import (
 	"log"
 	"net/http"
 	"sync/atomic"
+	"goserver/internal/database"
+	"database/sql"
+	"os"
+	_ "github.com/lib/pq" // PostgreSQL driver
+	_ "github.com/joho/godotenv"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	db *database.Queries
 }
 
 
 
 func main() {
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL must be set")
+	}
+
+	dbConn, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal("Error opening database: %s", err)
+	}
+	dbQueries := database.New(dbConn)
+
 	const port = "8080"
 	const filepathRoot = "."
 
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
+		db: dbQueries,
 	}
 
 	// Create the multiplexer
